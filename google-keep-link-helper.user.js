@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Google Keep에서 링크 추가 버튼으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
@@ -60,22 +60,22 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
         // TODO: 실제 링크 처리 로직 추가
     }
 
-    // 메모에 링크 추가 버튼 삽입
-    function addLinkButtonToNote(noteElement) {
-        // 이미 버튼이 있는지 확인
-        if (noteElement.querySelector('[aria-label="링크 추가"]')) {
-            return;
-        }
+    // 첫 번째 메모에만 링크 추가 버튼 삽입
+    function addLinkButtonToFirstNote() {
+        // 모든 메모 요소 찾기
+        const allNotes = document.querySelectorAll('.IZ65Hb-TBnied');
+        if (allNotes.length === 0) return;
 
-        // 새 메모 작성 영역인지 확인 (di8rgd-r4nke 클래스를 가진 부모 요소가 있는지)
-        const noteContainer = noteElement.closest('.IZ65Hb-n0tgWb');
-        if (!noteContainer || !noteContainer.classList.contains('di8rgd-r4nke')) {
-            console.log('새 메모 작성 영역이 아니므로 버튼을 추가하지 않습니다');
+        // 첫 번째 메모 요소
+        const firstNote = allNotes[0];
+
+        // 이미 버튼이 있는지 확인
+        if (firstNote.querySelector('[aria-label="링크 추가"]')) {
             return;
         }
 
         // 메모 고정 버튼 찾기
-        const pinButton = noteElement.querySelector('.IZ65Hb-nQ1Faf');
+        const pinButton = firstNote.querySelector('.IZ65Hb-nQ1Faf');
         if (!pinButton) return;
 
         // 버튼 컨테이너 찾기
@@ -92,7 +92,7 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
             buttonContainer.appendChild(linkButton);
         }
 
-        console.log('링크 추가 버튼이 추가되었습니다');
+        console.log('첫 번째 메모에 링크 추가 버튼이 추가되었습니다');
     }
 
     // 새로운 노트 감지
@@ -101,16 +101,16 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
             mutations.forEach(function(mutation) {
                 mutation.addedNodes.forEach(function(node) {
                     if (node.nodeType === 1) {
-                        // 노트 편집 모달 감지
+                        // 노트가 추가되면 첫 번째 노트에 버튼 추가 시도
                         if (node.classList && node.classList.contains('IZ65Hb-TBnied')) {
-                            addLinkButtonToNote(node);
+                            addLinkButtonToFirstNote();
                         }
 
                         // 하위 요소에서 노트 찾기
                         const notes = node.querySelectorAll('.IZ65Hb-TBnied');
-                        notes.forEach(note => {
-                            addLinkButtonToNote(note);
-                        });
+                        if (notes.length > 0) {
+                            addLinkButtonToFirstNote();
+                        }
                     }
                 });
             });
@@ -126,11 +126,8 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
     function init() {
         console.log('Google Keep Link Helper 초기화 중...');
 
-        // 기존 노트에 버튼 추가
-        const existingNotes = document.querySelectorAll('.IZ65Hb-TBnied');
-        existingNotes.forEach(note => {
-            addLinkButtonToNote(note);
-        });
+        // 첫 번째 메모에 버튼 추가
+        addLinkButtonToFirstNote();
 
         // 새 노트 감지 시작
         observeNotes();
