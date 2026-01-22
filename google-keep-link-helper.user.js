@@ -96,7 +96,7 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
                         titleField.dispatchEvent(new Event('change', { bubbles: true }));
 
                         // 내용 설정 (URL)
-                        contentField.textContent = url;
+                        contentField.textContent = ' ' + url;
                         contentField.dispatchEvent(new Event('input', { bubbles: true }));
                         contentField.dispatchEvent(new Event('change', { bubbles: true }));
 
@@ -116,7 +116,7 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
                         titleField.textContent = url;
                         titleField.dispatchEvent(new Event('input', { bubbles: true }));
 
-                        contentField.textContent = url;
+                        contentField.textContent = ' ' + url;
                         contentField.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 }
