@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.4
 // @description  Google Keep에서 링크 추가 버튼으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
@@ -50,9 +50,6 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
 
     // 링크 추가 버튼 클릭 처리
     function handleLinkButtonClick(button) {
-        const noteElement = button.closest('.IZ65Hb-TBnied');
-        if (!noteElement) return;
-
         const url = prompt('링크를 입력하세요:');
         if (!url) return;
 
@@ -60,39 +57,35 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
         // TODO: 실제 링크 처리 로직 추가
     }
 
-    // 메모에 링크 추가 버튼 삽입
-    function addLinkButtonToNote(noteElement) {
-        // 이미 버튼이 있는지 확인
-        if (noteElement.querySelector('[aria-label="링크 추가"]')) {
+    // 첫 번째 메모에만 링크 추가 버튼 삽입
+    function addLinkButtonToFirstNote() {
+        // DOM 순서상 첫 번째 메모 고정 버튼 찾기 (aria-label 사용)
+        const firstPinButton = document.querySelector('[aria-label="메모 고정"][aria-pressed="false"]');
+        if (!firstPinButton) {
+            console.log('메모 고정 버튼을 찾을 수 없습니다');
             return;
         }
-
-        // 새 메모 작성 영역인지 확인 (di8rgd-r4nke 클래스를 가진 부모 요소가 있는지)
-        const noteContainer = noteElement.closest('.IZ65Hb-n0tgWb');
-        if (!noteContainer || !noteContainer.classList.contains('di8rgd-r4nke')) {
-            console.log('새 메모 작성 영역이 아니므로 버튼을 추가하지 않습니다');
-            return;
-        }
-
-        // 메모 고정 버튼 찾기
-        const pinButton = noteElement.querySelector('.IZ65Hb-nQ1Faf');
-        if (!pinButton) return;
 
         // 버튼 컨테이너 찾기
-        const buttonContainer = pinButton.parentElement;
+        const buttonContainer = firstPinButton.parentElement;
         if (!buttonContainer) return;
+
+        // 이미 링크 추가 버튼이 있는지 확인
+        if (buttonContainer.querySelector('[aria-label="링크 추가"]')) {
+            return;
+        }
 
         // 링크 추가 버튼 생성 및 삽입
         const linkButton = createLinkButton();
 
         // 고정 버튼 다음에 삽입
-        if (pinButton.nextSibling) {
-            buttonContainer.insertBefore(linkButton, pinButton.nextSibling);
+        if (firstPinButton.nextSibling) {
+            buttonContainer.insertBefore(linkButton, firstPinButton.nextSibling);
         } else {
             buttonContainer.appendChild(linkButton);
         }
 
-        console.log('링크 추가 버튼이 추가되었습니다');
+        console.log('첫 번째 메모에 링크 추가 버튼이 추가되었습니다');
     }
 
     // 새로운 노트 감지
@@ -101,16 +94,15 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
             mutations.forEach(function(mutation) {
                 mutation.addedNodes.forEach(function(node) {
                     if (node.nodeType === 1) {
-                        // 노트 편집 모달 감지
-                        if (node.classList && node.classList.contains('IZ65Hb-TBnied')) {
-                            addLinkButtonToNote(node);
+                        // 메모 고정 버튼이 추가되었는지 확인 (DOM 구조 기반)
+                        if (node.querySelector && node.querySelector('[aria-label="메모 고정"]')) {
+                            addLinkButtonToFirstNote();
                         }
 
-                        // 하위 요소에서 노트 찾기
-                        const notes = node.querySelectorAll('.IZ65Hb-TBnied');
-                        notes.forEach(note => {
-                            addLinkButtonToNote(note);
-                        });
+                        // 또는 직접 메모 고정 버튼인 경우
+                        if (node.getAttribute && node.getAttribute('aria-label') === '메모 고정') {
+                            addLinkButtonToFirstNote();
+                        }
                     }
                 });
             });
@@ -126,11 +118,8 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
     function init() {
         console.log('Google Keep Link Helper 초기화 중...');
 
-        // 기존 노트에 버튼 추가
-        const existingNotes = document.querySelectorAll('.IZ65Hb-TBnied');
-        existingNotes.forEach(note => {
-            addLinkButtonToNote(note);
-        });
+        // 첫 번째 메모에 버튼 추가
+        addLinkButtonToFirstNote();
 
         // 새 노트 감지 시작
         observeNotes();
