@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Google Keep에서 링크 추가 버튼으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
@@ -50,9 +50,6 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
 
     // 링크 추가 버튼 클릭 처리
     function handleLinkButtonClick(button) {
-        const noteElement = button.closest('.IZ65Hb-TBnied');
-        if (!noteElement) return;
-
         const url = prompt('링크를 입력하세요:');
         if (!url) return;
 
@@ -62,32 +59,28 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
 
     // 첫 번째 메모에만 링크 추가 버튼 삽입
     function addLinkButtonToFirstNote() {
-        // 모든 메모 요소 찾기
-        const allNotes = document.querySelectorAll('.IZ65Hb-TBnied');
-        if (allNotes.length === 0) return;
-
-        // 첫 번째 메모 요소
-        const firstNote = allNotes[0];
-
-        // 이미 버튼이 있는지 확인
-        if (firstNote.querySelector('[aria-label="링크 추가"]')) {
+        // DOM 순서상 첫 번째 메모 고정 버튼 찾기 (aria-label 사용)
+        const firstPinButton = document.querySelector('[aria-label="메모 고정"][aria-pressed="false"]');
+        if (!firstPinButton) {
+            console.log('메모 고정 버튼을 찾을 수 없습니다');
             return;
         }
 
-        // 메모 고정 버튼 찾기
-        const pinButton = firstNote.querySelector('.IZ65Hb-nQ1Faf');
-        if (!pinButton) return;
-
         // 버튼 컨테이너 찾기
-        const buttonContainer = pinButton.parentElement;
+        const buttonContainer = firstPinButton.parentElement;
         if (!buttonContainer) return;
+
+        // 이미 링크 추가 버튼이 있는지 확인
+        if (buttonContainer.querySelector('[aria-label="링크 추가"]')) {
+            return;
+        }
 
         // 링크 추가 버튼 생성 및 삽입
         const linkButton = createLinkButton();
 
         // 고정 버튼 다음에 삽입
-        if (pinButton.nextSibling) {
-            buttonContainer.insertBefore(linkButton, pinButton.nextSibling);
+        if (firstPinButton.nextSibling) {
+            buttonContainer.insertBefore(linkButton, firstPinButton.nextSibling);
         } else {
             buttonContainer.appendChild(linkButton);
         }
@@ -101,14 +94,13 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
             mutations.forEach(function(mutation) {
                 mutation.addedNodes.forEach(function(node) {
                     if (node.nodeType === 1) {
-                        // 노트가 추가되면 첫 번째 노트에 버튼 추가 시도
-                        if (node.classList && node.classList.contains('IZ65Hb-TBnied')) {
+                        // 메모 고정 버튼이 추가되었는지 확인 (DOM 구조 기반)
+                        if (node.querySelector && node.querySelector('[aria-label="메모 고정"]')) {
                             addLinkButtonToFirstNote();
                         }
 
-                        // 하위 요소에서 노트 찾기
-                        const notes = node.querySelectorAll('.IZ65Hb-TBnied');
-                        if (notes.length > 0) {
+                        // 또는 직접 메모 고정 버튼인 경우
+                        if (node.getAttribute && node.getAttribute('aria-label') === '메모 고정') {
                             addLinkButtonToFirstNote();
                         }
                     }
