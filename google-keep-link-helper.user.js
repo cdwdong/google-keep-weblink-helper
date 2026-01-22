@@ -54,7 +54,78 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
         if (!url) return;
 
         console.log('입력된 링크:', url);
-        // TODO: 실제 링크 처리 로직 추가
+
+        // 첫 번째 메모 찾기
+        const firstPinButton = document.querySelector('[aria-label="메모 고정"][aria-pressed="false"]');
+        if (!firstPinButton) {
+            console.log('첫 번째 메모를 찾을 수 없습니다');
+            return;
+        }
+
+        // 메모 컨테이너 찾기
+        const noteContainer = firstPinButton.closest('[role="dialog"]') ||
+                              firstPinButton.closest('.IZ65Hb-n0tgWb');
+        if (!noteContainer) {
+            console.log('메모 컨테이너를 찾을 수 없습니다');
+            return;
+        }
+
+        // URL에서 페이지 제목 가져오기
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            onload: function(response) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(response.responseText, 'text/html');
+                    const title = doc.querySelector('title')?.textContent || url;
+
+                    console.log('가져온 제목:', title);
+
+                    // 첫 번째 메모의 제목과 내용 필드 찾기
+                    const editableElements = noteContainer.querySelectorAll('[contenteditable="true"]');
+
+                    if (editableElements.length >= 2) {
+                        // 첫 번째는 제목, 두 번째는 내용
+                        const titleField = editableElements[0];
+                        const contentField = editableElements[1];
+
+                        // 제목 설정
+                        titleField.textContent = title;
+                        titleField.dispatchEvent(new Event('input', { bubbles: true }));
+                        titleField.dispatchEvent(new Event('change', { bubbles: true }));
+
+                        // 내용 설정 (URL)
+                        contentField.textContent = url;
+                        contentField.dispatchEvent(new Event('input', { bubbles: true }));
+                        contentField.dispatchEvent(new Event('change', { bubbles: true }));
+
+                        console.log('메모 제목과 내용이 설정되었습니다');
+                    } else {
+                        console.log('제목/내용 필드를 찾을 수 없습니다');
+                    }
+                } catch (error) {
+                    console.error('제목 추출 실패:', error);
+
+                    // 제목 추출 실패시 URL을 그대로 사용
+                    const editableElements = noteContainer.querySelectorAll('[contenteditable="true"]');
+                    if (editableElements.length >= 2) {
+                        const titleField = editableElements[0];
+                        const contentField = editableElements[1];
+
+                        titleField.textContent = url;
+                        titleField.dispatchEvent(new Event('input', { bubbles: true }));
+
+                        contentField.textContent = url;
+                        contentField.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            },
+            onerror: function(error) {
+                console.error('페이지 가져오기 실패:', error);
+                alert('페이지를 가져오는데 실패했습니다.');
+            }
+        });
     }
 
     // 첫 번째 메모에만 링크 추가 버튼 삽입
