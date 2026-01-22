@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Google Keep에서 링크를 붙여넣으면 자동으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
@@ -38,6 +38,30 @@
         });
     }
 
+    // 노트가 비어있는지 확인
+    function isNoteEmpty(noteElement) {
+        // 제목 필드 확인
+        const titleField = noteElement.querySelector('div[contenteditable="true"]:first-of-type, div[aria-label*="제목"], div[aria-label*="Title"]');
+        if (titleField && titleField.textContent.trim()) {
+            return false; // 제목이 있으면 빈 메모가 아님
+        }
+
+        // 모든 contenteditable 요소 확인
+        const allEditables = noteElement.querySelectorAll('[contenteditable="true"]');
+        for (let editable of allEditables) {
+            const text = editable.textContent || editable.innerText;
+            if (text.trim()) {
+                // URL만 있는 경우는 빈 메모로 간주 (이미 처리 중인 경우)
+                const urls = text.match(urlPattern);
+                if (!urls || text.trim() !== urls[0]) {
+                    return false; // URL 외의 다른 내용이 있으면 빈 메모가 아님
+                }
+            }
+        }
+
+        return true; // 비어있음
+    }
+
     // 노트 편집 감지 및 처리
     function handleNoteEdit(noteElement) {
         // 내용 입력 필드 찾기
@@ -45,9 +69,29 @@
         if (!contentEditable) return;
 
         let processingPaste = false;
+        let contentBeforePaste = '';
+
+        // paste 이벤트 전에 현재 내용 저장
+        contentEditable.addEventListener('beforeinput', function(e) {
+            if (e.inputType === 'insertFromPaste') {
+                contentBeforePaste = contentEditable.textContent || contentEditable.innerText;
+            }
+        });
 
         contentEditable.addEventListener('paste', async function(e) {
             if (processingPaste) return;
+
+            // 붙여넣기 전에 내용이 비어있지 않으면 작동하지 않음
+            if (contentBeforePaste.trim() !== '') {
+                return;
+            }
+
+            // 제목이 있으면 작동하지 않음
+            const titleField = noteElement.querySelector('div[contenteditable="true"]:first-of-type, div[aria-label*="제목"], div[aria-label*="Title"]');
+            if (titleField && titleField.textContent.trim()) {
+                return;
+            }
+
             processingPaste = true;
 
             setTimeout(async () => {
@@ -102,6 +146,12 @@
 
             const text = contentEditable.textContent || contentEditable.innerText;
             const urls = text.match(urlPattern);
+
+            // 제목이 있으면 작동하지 않음
+            const titleField = noteElement.querySelector('div[contenteditable="true"]:first-of-type, div[aria-label*="제목"], div[aria-label*="Title"]');
+            if (titleField && titleField.textContent.trim()) {
+                return;
+            }
 
             if (urls && urls.length > 0 && text.trim() === urls[0]) {
                 const url = urls[0];
