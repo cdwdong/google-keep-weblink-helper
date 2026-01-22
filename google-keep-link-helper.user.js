@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Google Keep에서 링크 추가 버튼으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
@@ -54,6 +54,13 @@
     function addLinkButtonToNote(noteElement) {
         // 이미 버튼이 있는지 확인
         if (noteElement.querySelector('[aria-label="링크 추가"]')) {
+            return;
+        }
+
+        // 새 메모 작성 영역인지 확인 (di8rgd-r4nke 클래스를 가진 부모 요소가 있는지)
+        const noteContainer = noteElement.closest('.IZ65Hb-n0tgWb');
+        if (!noteContainer || !noteContainer.classList.contains('di8rgd-r4nke')) {
+            console.log('새 메모 작성 영역이 아니므로 버튼을 추가하지 않습니다');
             return;
         }
 
