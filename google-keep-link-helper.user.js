@@ -1,13 +1,23 @@
 // ==UserScript==
 // @name         Google Keep Link Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Google Keep에서 링크 추가 버튼으로 제목을 링크의 title로 설정하고 내용을 링크로 채웁니다
 // @author       You
 // @match        https://keep.google.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      *
 // ==/UserScript==
+
+if (window.trustedTypes && window.trustedTypes.createPolicy) {
+    if (!window.trustedTypes.defaultPolicy) {
+        window.trustedTypes.createPolicy('default', {
+            createHTML: (string) => string,
+            createScriptURL: (string) => string,
+            createScript: (string) => string,
+        });
+    }
+}
 
 (function() {
     'use strict';
